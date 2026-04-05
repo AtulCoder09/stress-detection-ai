@@ -93,3 +93,5 @@ You can view the full model inference logic deployed on **Hugging Face Spaces**.
 Additionally, we maintain a dynamic, customized front-end UI that visualizes the results natively on a beautiful premium dashboard:
 - **Netlify UI Preview**: [ai-stress-detection.netlify.app](http://ai-stress-detection.netlify.app)
 - **Actionable Relief Protocols**: Alongside the stress score prediction, the UI dynamically provides evidence-based stress reduction methods (such as Box Breathing, 4-7-8 Breathing, or the Physiological Sigh) tailored precisely to your overall predicted stress bracket.
+<img width="1919" height="1031" alt="image" src="https://github.com/user-attachments/assets/fa51bd3f-78c6-41f2-8b1f-0dbcb096c122" />
+
