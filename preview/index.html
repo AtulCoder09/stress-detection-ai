@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Stress Detection — Professional Edition</title>
+    <meta name="description" content="Next generation stress level detection powered by EfficientNet & Wav2Vec2.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset & Variables */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-base: #03030a;
+            --surface-1: rgba(18, 18, 28, 0.5);
+            --surface-hover: rgba(26, 26, 38, 0.6);
+            --border-subtle: rgba(255, 255, 255, 0.05);
+            --border-highlight: rgba(255, 255, 255, 0.15);
+            
+            --text-main: #f4f4f9;
+            --text-dim: #9494a8;
+            --text-muted: #5e5e78;
+            
+            --accent-brand: #625df5;
+            --accent-glow: #8782ff;
+            --accent-pink: #f22e8a;
+            --accent-cyan: #00e0ff;
+            --accent-green: #00ff87;
+            --accent-yellow: #ffdf00;
+            --accent-red: #ff3b3b;
+            
+            --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            --radii-lg: 24px;
+            --radii-md: 16px;
+            --radii-sm: 10px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Advanced Ambient Background ── */
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+            overflow: hidden;
+            background: radial-gradient(circle at 15% 50%, rgba(98, 93, 245, 0.08), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(242, 46, 138, 0.05), transparent 50%);
+        }
+        
+        .ambient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.15;
+            animation: orb-float 20s infinite ease-in-out alternate;
+        }
+        .orb-1 { width: 50vw; height: 50vw; background: var(--accent-brand); top: -10vw; left: -10vw; }
+        .orb-2 { width: 40vw; height: 40vw; background: var(--accent-cyan); bottom: -10vw; right: -10vw; animation-delay: -5s; }
+        .orb-3 { width: 30vw; height: 30vw; background: var(--accent-pink); top: 50%; left: 50%; transform: translate(-50%, -50%); animation-delay: -10s; }
+
+        @keyframes orb-float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(5%, 5%) scale(1.1); }
+        }
+
+        /* ── Layout & Typography ── */
+        .main-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero { text-align: center; margin-bottom: 56px; }
+        .hero h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff 0%, #a5a5ca 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto 24px;
+            font-weight: 300;
+        }
+        .tech-badges {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+        }
+        .t-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-highlight);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            backdrop-filter: blur(10px);
+        }
+        .t-badge span { color: var(--accent-cyan); font-weight: 600; }
+
+        /* ── Glassmorphism Components ── */
+        .glass-panel {
+            background: var(--surface-1);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radii-lg);
+            box-shadow: var(--shadow-glass);
+            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .glass-panel::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+            opacity: 0.5; pointer-events: none;
+        }
+        .glass-panel:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px -8px rgba(0,0,0,0.5);
+            border-color: var(--border-highlight);
+        }
+
+        .panel-header {
+            padding: 24px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .panel-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .panel-title i { font-style: normal; font-size: 1.4rem; }
+
+        /* ── Advanced Segmented Controls ── */
+        .segmented-control {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 100px;
+            padding: 4px;
+            position: relative;
+        }
+        .seg-btn {
+            background: transparent; color: var(--text-dim);
+            border: none; padding: 6px 16px;
+            font-size: 0.85rem; font-weight: 500; font-family: 'Inter', sans-serif;
+            cursor: pointer; border-radius: 100px;
+            transition: all 0.3s ease; position: relative; z-index: 2;
+        }
+        .seg-btn.active { color: #fff; text-shadow: 0 2px 10px rgba(255,255,255,0.2); }
+        .seg-highlighter {
+            position: absolute; top: 4px; bottom: 4px; left: 4px;
+            width: calc(50% - 4px); background: var(--surface-hover);
+            border-radius: 100px; z-index: 1; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            border: 1px solid var(--border-highlight);
+        }
+
+        /* ── Input Grids ── */
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 48px; }
+        @media(max-width: 850px) { .input-grid { grid-template-columns: 1fr; } }
+        
+        .panel-content { padding: 0 24px 24px; }
+        
+        /* ── Media Displays ── */
+        .media-box {
+            background: #000;
+            border-radius: var(--radii-md);
+            height: 320px;
+            position: relative;
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .media-box video, .media-box img {
+            width: 100%; height: 100%; object-fit: cover;
+            border-radius: var(--radii-md);
+        }
+        .media-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radii-md);
+        }
+
+        /* ── Cool Camera Guides ── */
+        .cam-guides {
+            position: absolute; inset: 20px; border: 1px dashed rgba(255,255,255,0.2);
+            pointer-events: none; border-radius: 20px; opacity: 0; transition: opacity 0.3s;
+        }
+        .cam-guides::before, .cam-guides::after { content:''; position:absolute; width: 30px; height: 30px; border-color: rgba(255,255,255,0.6); border-style: solid; }
+        .cam-guides::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-top-left-radius: 20px;}
+        .cam-guides::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-bottom-right-radius: 20px;}
+        .is-live .cam-guides { opacity: 1; }
+
+        /* ── Audio Vis ── */
+        .viz-canvas { width: 100%; height: 100%; border-radius: var(--radii-md); }
+        .mic-waves {
+            position: absolute; width: 80px; height: 80px;
+            background: rgba(98, 93, 245, 0.2); border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+        }
+        .mic-waves::before {
+            content:''; position: absolute; inset: -20px; border-radius: 50%;
+            border: 1px solid var(--accent-brand); opacity: 0; animation: ripple 2s linear infinite;
+        }
+        .is-recording .mic-waves { display: flex; }
+        @keyframes ripple { 0%{ transform:scale(0.8); opacity:1;} 100%{transform:scale(2); opacity:0;} }
+
+        /* ── Action Buttons ── */
+        .controls-row { display: flex; gap: 12px; margin-top: 16px; justify-content: center; }
+        .btn {
+            padding: 12px 24px; border: none; border-radius: 12px;
+            font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.2s ease; position: relative; overflow: hidden;
+        }
+        .btn::after {
+            content:''; position:absolute; inset:0; background:rgba(255,255,255,0.1); opacity:0; transition:opacity 0.2s;
+        }
+        .btn:hover::after { opacity: 1; }
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+        
+        .btn-outline { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-subtle); }
+        .btn-outline:hover { background: rgba(255,255,255,0.1); border-color: var(--border-highlight); }
+        
+        .btn-primary { background: linear-gradient(135deg, var(--accent-brand), var(--accent-glow)); color: #fff; box-shadow: 0 4px 15px rgba(98, 93, 245, 0.3); }
+        .btn-primary:hover { box-shadow: 0 6px 25px rgba(98, 93, 245, 0.5); }
+        
+        .btn-danger { background: rgba(255, 59, 59, 0.15); color: #ff5c5c; border: 1px solid rgba(255, 59, 59, 0.3); }
+
+        /* ── File Upload Dropzones ── */
+        .dropzone {
+            height: 320px; border-radius: var(--radii-md);
+            border: 2px dashed var(--border-highlight);
+            background: rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .dropzone:hover { background: rgba(255,255,255,0.02); border-color: var(--accent-brand); }
+        .dropzone-icon { font-size: 3rem; margin-bottom: 12px; color: var(--text-dim); transition: transform 0.3s; }
+        .dropzone:hover .dropzone-icon { transform: translateY(-5px); color: var(--accent-brand); }
+        
+        /* ── Master Analyze Button ── */
+        .analyze-wrapper { text-align: center; margin-bottom: 64px; position: relative; }
+        .btn-analyze {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px;
+            padding: 18px 56px; border-radius: 100px;
+            background: linear-gradient(135deg, var(--accent-brand) 0%, #a044ff 100%);
+            color: #fff; border: none; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(98,93,245,0.4);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative; overflow: hidden;
+            z-index: 2;
+        }
+        .btn-analyze::before {
+            content:''; position:absolute; inset:0; border-radius:100px;
+            background: linear-gradient(135deg, #a044ff 0%, var(--accent-brand) 100%);
+            opacity:0; transition:opacity 0.4s; z-index:-1;
+        }
+        .btn-analyze:hover::before { opacity:1; }
+        .btn-analyze:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 15px 40px rgba(98,93,245,0.6); }
+        .btn-analyze:active { transform: translateY(0) scale(0.98); }
+        .btn-analyze.loading { pointer-events:none; font-size:0; padding:18px 40px; }
+        .btn-analyze.loading::after {
+            content: ''; display:block; width: 24px; height: 24px;
+            border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Dashboard Results ── */
+        .results-container {
+            display: none; opacity: 0; transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .results-container.visible { display: block; opacity: 1; transform: translateY(0); }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+        @media(max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        /* Gauge Area */
+        .gauge-panel {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 40px 24px; text-align: center;
+        }
+        .gauge-wrapper { position: relative; width: 220px; height: 220px; margin-bottom: 24px; }
+        .gauge-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .gauge-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 12; }
+        .gauge-fill {
+            fill: none; stroke: url(#gaugeGradient); stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 628; stroke-dashoffset: 628; /* PI*2*100 = 628 */
+            transition: stroke-dashoffset 2s cubic-bezier(0.165, 0.84, 0.44, 1);
+            filter: drop-shadow(0 0 8px rgba(0,255,135,0.5));
+        }
+        .gauge-center {
+            position: absolute; inset:0; display:flex; flex-direction:column;
+            align-items:center; justify-content:center;
+        }
+        .g-value { font-family: 'Outfit', sans-serif; font-size: 4rem; font-weight: 800; line-height: 1; margin-bottom:4px; }
+        .g-label { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing:1px; }
+
+        .stress-status { font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+        .stress-insight { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; padding: 0 10px; }
+
+        /* Breakdown Area */
+        .breakdown-panel { padding: 32px; }
+        .bp-title { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 600; border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px; margin-bottom: 24px; display:flex; align-items:center; justify-content:space-between; }
+        
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        @media(max-width: 600px) { .metrics-grid { grid-template-columns: 1fr; gap: 24px; } }
+        
+        .metric-col h4 { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; display:flex; align-items:center; gap:8px;}
+        
+        .emotion-row { display: flex; align-items: center; margin-bottom: 16px; }
+        .e-label { width: 70px; font-size: 0.85rem; font-weight: 500; color: var(--text-dim); }
+        .e-track {
+            flex: 1; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;
+            margin: 0 12px; position:relative;
+        }
+        .e-fill {
+            height: 100%; width: 0%; border-radius: 4px;
+            transition: width 1.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .e-pct { width: 45px; font-size: 0.85rem; font-weight: 600; text-align: right; }
+
+        /* Colors for Emotions */
+        .em-angry { background: #ff3b3b; box-shadow: 0 0 10px rgba(255,59,59,0.5); }
+        .em-disgust { background: #b5179e; box-shadow: 0 0 10px rgba(181,23,158,0.5); }
+        .em-fear { background: #f77f00; box-shadow: 0 0 10px rgba(247,127,0,0.5); }
+        .em-happy { background: #00ff87; box-shadow: 0 0 10px rgba(0,255,135,0.5); }
+        .em-neutral { background: #4cc9f0; box-shadow: 0 0 10px rgba(76,201,240,0.5); }
+        .em-sad { background: #4361ee; box-shadow: 0 0 10px rgba(67,97,238,0.5); }
+        .em-surprise { background: #f4a261; box-shadow: 0 0 10px rgba(244,162,97,0.5); }
+
+        /* ── Status Indicators ── */
+        .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--text-muted); margin-right:6px; box-shadow:0 0 8px currentColor; }
+        .status-dot.active { background: var(--accent-green); color: var(--accent-green); }
+        .status-dot.recording { background: var(--accent-red); color: var(--accent-red); animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.4; } }
+
+        /* Footer */
+        .footer { text-align:center; padding: 40px; color: var(--text-muted); font-size: 0.85rem; }
+        .footer a { color: var(--accent-cyan); text-decoration:none; }
+
+        /* ── Suggestions Panel ── */
+        .sugg-container { display: flex; flex-direction: column; gap: 12px; }
+        .sugg-item { background: rgba(255,255,255,0.03); border-left: 3px solid var(--accent-brand); padding: 16px; border-radius: 8px; font-size: 0.95rem; }
+        .sugg-item strong { display: block; color: var(--text-main); margin-bottom: 4px; font-weight: 600; font-family: 'Outfit', sans-serif; letter-spacing: 0.5px; }
+        .sugg-item span { color: var(--text-dim); }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <div class="main-wrapper">
+        <header class="hero">
+            <h1>Smart Stress Detection</h1>
+            <p>A hybrid deep-learning architecture fusing facial expressions and vocal prosody to identify physiological stress states in real-time.</p>
+            <div class="tech-badges">
+                <div class="t-badge"><span>📸 Face</span> EfficientNet-B2 (w: 0.6)</div>
+                <div class="t-badge"><span>🎙️ Voice</span> Wav2Vec2 (w: 0.4)</div>
+            </div>
+        </header>
+
+        <!-- INPUTS GRID -->
+        <div class="input-grid">
+            
+            <!-- FACE PANEL -->
+            <div class="glass-panel" id="face-container">
+                <div class="panel-header">
+                    <div class="panel-title"><i>📸</i> Visual Input</div>
+                    <div class="segmented-control">
+                        <div class="seg-highlighter" id="face-hl"></div>
+                        <button class="seg-btn active" onclick="setFaceMode('cam', this)">Webcam</button>
+                        <button class="seg-btn" onclick="setFaceMode('upload', this)">Upload</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    
+                    <!-- Webcam View -->
+                    <div id="face-cam-view">
+                        <div class="media-box" id="face-media-box">
+                            <video id="face-video" autoplay muted playsinline class="hidden"></video>
+                            <canvas id="face-canvas" class="hidden"></canvas>
+                            <img id="face-preview" class="hidden" alt="Captured face">
+                            <div class="cam-guides"></div>
+                            <div class="media-overlay"></div>
+                            
+                            <div id="face-idle-state" style="text-align:center; color:var(--text-muted); z-index:2;">
+                                <i style="font-size:3rem; margin-bottom:10px; display:block;">📷</i>
+                                <span style="font-size:0.9rem;">Camera inactive</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <button class="btn btn-outline" id="btn-start-cam" onclick="startCamera()">Start Camera</button>
+                            <button class="btn btn-primary hidden" id="btn-capture" onclick="captureImage()">Capture Image</button>
+                            <button class="btn btn-outline hidden" id="btn-retake-cam" onclick="resetFace()">Retake</button>
+                        </div>
+                        <div style="text-align:center; margin-top:12px; font-size:0.8rem; color:var(--text-muted);">
+                            <span class="status-dot" id="face-status-dot"></span> <span id="face-status-txt">Camera Off</span>
+                        </div>
+                    </div>
+
+                    <!-- Upload View -->
+                    <div id="face-upload-view" class="hidden">
+                        <div class="dropzone" onclick="document.getElementById('face-upload').click()">
+                            <div class="dropzone-icon">📁</div>
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Click to Browse</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted);">JPG, PNG, WebP</div>
+                        </div>
+                        <input type="file" id="face-upload" accept="image/*" class="hidden" onchange="handleFaceUpload(event)">
+                        
+                        <div id="face-upload-result" class="hidden" style="margin-top:16px;">
+                            <img id="face-up-img" style="width:100%; height:200px; object-fit:cover; border-radius:12px; border:1px solid var(--border-highlight);">
+                            <div class="controls-row"><button class="btn btn-outline" onclick="resetFaceUpload()">Clear Image</button></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VOICE PANEL -->
+            <div class="glass-panel" id="voice-container">
+                <div class="panel-header">
+                    <div class="panel-title"><i>🎙️</i> Audio Input</div>
+                    <div class="segmented-control">
+                        <div class="seg-highlighter" id="voice-hl"></div>
+                        <button class="seg-btn active" onclick="setVoiceMode('mic', this)">Microphone</button>
+                        <button class="seg-btn" onclick="setVoiceMode('upload', this)">Upload</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    
+                    <!-- Mic View -->
+                    <div id="voice-mic-view">
+                        <div class="media-box" id="voice-media-box">
+                            <canvas id="audio-viz" class="viz-canvas"></canvas>
+                            <div class="mic-waves">
+                                <i style="font-size:2rem; color:var(--accent-glow); font-style:normal;">🎤</i>
+                            </div>
+                            <div class="media-overlay"></div>
+                            
+                            <div id="voice-post-rec" class="hidden" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                                <i style="font-size:3rem; margin-bottom:16px; color:var(--accent-green); font-style:normal;">✅</i>
+                                <span style="font-weight:600; margin-bottom:12px;">Audio Recorded</span>
+                                <audio id="voice-playback" controls style="width:80%; height:36px;"></audio>
+                            </div>
+                        </div>
+                        
+                        <div class="controls-row">
+                            <button class="btn btn-outline" id="btn-start-mic" onclick="startRecording()">Start Recording</button>
+                            <button class="btn btn-danger hidden" id="btn-stop-mic" onclick="stopRecording()">Stop Recording</button>
+                            <button class="btn btn-outline hidden" id="btn-retake-mic" onclick="resetVoice()">Discard</button>
+                        </div>
+                        <div style="text-align:center; margin-top:12px; font-size:0.8rem; color:var(--text-muted);">
+                            <span class="status-dot" id="voice-status-dot"></span> <span id="voice-status-txt">Mic Off</span>
+                        </div>
+                    </div>
+
+                    <!-- Upload View -->
+                    <div id="voice-upload-view" class="hidden">
+                        <div class="dropzone" onclick="document.getElementById('voice-upload').click()">
+                            <div class="dropzone-icon">🎧</div>
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Click to Browse</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted);">WAV, MP3, OGG</div>
+                        </div>
+                        <input type="file" id="voice-upload" accept="audio/*" class="hidden" onchange="handleVoiceUpload(event)">
+                        
+                        <div id="voice-upload-result" class="hidden" style="margin-top:16px; background:rgba(0,0,0,0.3); padding:20px; border-radius:12px; border:1px solid var(--border-highlight); text-align:center;">
+                            <i style="font-size:2rem; color:var(--accent-green); display:block; margin-bottom:10px; font-style:normal;">🎶</i>
+                            <span style="font-weight:500; font-size:0.9rem; display:block; margin-bottom:12px;" id="voice-up-name">file.wav</span>
+                            <audio id="voice-up-playback" controls style="width:100%; height:36px; margin-bottom:16px;"></audio>
+                            <div class="controls-row" style="margin-top:0;"><button class="btn btn-outline" onclick="resetVoiceUpload()">Clear Audio</button></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- ACTION -->
+        <div class="analyze-wrapper">
+            <button class="btn-analyze" id="btn-analyze" onclick="runInference()">Run Neural Analysis</button>
+        </div>
+
+        <!-- DASHBOARD RESULTS -->
+        <div class="results-container" id="dashboard">
+            <div class="dashboard-grid">
+                
+                <!-- Macro Gauge -->
+                <div class="glass-panel gauge-panel">
+                    <svg width="0" height="0">
+                        <defs>
+                            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#00ff87"/>
+                                <stop offset="50%" stop-color="#ffdf00"/>
+                                <stop offset="100%" stop-color="#ff3b3b"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    
+                    <div class="gauge-wrapper">
+                        <svg class="gauge-svg" viewBox="0 0 220 220">
+                            <circle class="gauge-bg" cx="110" cy="110" r="100"></circle>
+                            <circle class="gauge-fill" id="gauge-circle" cx="110" cy="110" r="100"></circle>
+                        </svg>
+                        <div class="gauge-center">
+                            <div class="g-value" id="res-score">0</div>
+                            <div class="g-label">Score</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stress-status" id="res-status">Analysis Pending</div>
+                    <div class="stress-insight" id="res-insight">Complete the inputs above to run inference over the facial and vocal datasets.</div>
+                </div>
+
+                <!-- Micro Breakdown -->
+                <div class="glass-panel breakdown-panel">
+                    <div class="bp-title">
+                        <span>Emotion Probability Distribution</span>
+                        <span style="font-size:0.8rem; font-family:'Inter',sans-serif; color:var(--text-muted); font-weight:400;">Model Fusion active</span>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-col">
+                            <h4><i>📸</i> Visual Branch (60%)</h4>
+                            <div id="face-bars">
+                                <!-- Bars injected by JS -->
+                                <div style="color:var(--text-muted); font-size:0.85rem; padding-top:20px;">No visual data provided.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-col">
+                            <h4><i>🎙️</i> Audio Branch (40%)</h4>
+                            <div id="voice-bars">
+                                <!-- Bars injected by JS -->
+                                <div style="color:var(--text-muted); font-size:0.85rem; padding-top:20px;">No audio data provided.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relief Protocols -->
+                <div class="glass-panel" style="grid-column: 1 / -1; padding: 32px;" id="relief-panel">
+                    <div class="bp-title" style="margin-bottom: 20px;">
+                        <span>💡 Verified Relief Protocols</span>
+                        <span style="font-size:0.8rem; font-family:'Inter',sans-serif; color:var(--text-muted); font-weight:400;">Actionable Neuroscience</span>
+                    </div>
+                    <div class="sugg-container" id="relief-suggestions">
+                        <!-- populated dynamically -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>UI Preview Concept · Powered by JavaScript, HTML5 & CSS3<br>
+            <a href="#">View Model Architecture on Hugging Face DataSpaces</a></p>
+        </div>
+        
+    </div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// STATE MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+const state = {
+    hasFace: false,
+    hasVoice: false,
+    isRecording: false,
+    camStream: null,
+    audioStream: null,
+    mediaReq: null,
+    audioCtx: null,
+    analyser: null,
+    vizReq: null
+};
+
+const EMOTIONS = ['angry','disgust','fear','happy','neutral','sad','surprise'];
+const STRESS_W = { angry:0.9, disgust:0.7, fear:0.85, happy:0.1, neutral:0.25, sad:0.75, surprise:0.5 };
+
+// ══════════════════════════════════════════════════════════════
+// UI TAB LOGIC
+// ══════════════════════════════════════════════════════════════
+function setFaceMode(mode, btn) {
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Animate highlighter
+    const hl = document.getElementById('face-hl');
+    if(mode === 'upload') hl.style.transform = 'translateX(100%)';
+    else hl.style.transform = 'translateX(0)';
+    
+    document.getElementById('face-cam-view').classList.toggle('hidden', mode==='upload');
+    document.getElementById('face-upload-view').classList.toggle('hidden', mode==='cam');
+    
+    if(mode==='upload' && state.camStream) resetFace();
+}
+
+function setVoiceMode(mode, btn) {
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    const hl = document.getElementById('voice-hl');
+    if(mode === 'upload') hl.style.transform = 'translateX(100%)';
+    else hl.style.transform = 'translateX(0)';
+    
+    document.getElementById('voice-mic-view').classList.toggle('hidden', mode==='upload');
+    document.getElementById('voice-upload-view').classList.toggle('hidden', mode==='cam');
+    
+    if(mode==='upload' && (state.isRecording || state.hasVoice)) resetVoice();
+}
+
+// ══════════════════════════════════════════════════════════════
+// WEBCAM LOGIC
+// ══════════════════════════════════════════════════════════════
+async function startCamera() {
+    try {
+        state.camStream = await navigator.mediaDevices.getUserMedia({ video: {facingMode:'user'} });
+        const video = document.getElementById('face-video');
+        video.srcObject = state.camStream;
+        video.classList.remove('hidden');
+        document.getElementById('face-idle-state').classList.add('hidden');
+        document.getElementById('face-media-box').classList.add('is-live');
+        
+        document.getElementById('btn-start-cam').classList.add('hidden');
+        document.getElementById('btn-capture').classList.remove('hidden');
+        
+        document.getElementById('face-status-dot').className = 'status-dot active';
+        document.getElementById('face-status-txt').innerText = 'Camera Live';
+    } catch(e) { alert("Camera access denied."); }
+}
+
+function captureImage() {
+    const video = document.getElementById('face-video');
+    const canvas = document.getElementById('face-canvas');
+    const preview = document.getElementById('face-preview');
+    
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    preview.src = canvas.toDataURL('image/jpeg');
+    
+    // Stop stream
+    state.camStream.getTracks().forEach(t => t.stop());
+    state.camStream = null;
+    
+    video.classList.add('hidden');
+    preview.classList.remove('hidden');
+    document.getElementById('face-media-box').classList.remove('is-live');
+    
+    document.getElementById('btn-capture').classList.add('hidden');
+    document.getElementById('btn-retake-cam').classList.remove('hidden');
+    
+    document.getElementById('face-status-txt').innerText = 'Image Captured';
+    state.hasFace = true;
+}
+
+function resetFace() {
+    state.hasFace = false;
+    document.getElementById('face-preview').classList.add('hidden');
+    document.getElementById('face-idle-state').classList.remove('hidden');
+    document.getElementById('btn-start-cam').classList.remove('hidden');
+    document.getElementById('btn-retake-cam').classList.add('hidden');
+    document.getElementById('face-status-dot').className = 'status-dot';
+    document.getElementById('face-status-txt').innerText = 'Camera Off';
+}
+
+function handleFaceUpload(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    document.getElementById('face-up-img').src = url;
+    document.getElementById('face-upload-view').firstElementChild.classList.add('hidden'); // hide dropzone
+    document.getElementById('face-upload-result').classList.remove('hidden');
+    state.hasFace = true;
+}
+function resetFaceUpload() {
+    state.hasFace = false;
+    document.getElementById('face-upload').value = '';
+    document.getElementById('face-upload-result').classList.add('hidden');
+    document.getElementById('face-upload-view').firstElementChild.classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MICROPHONE LOGIC
+// ══════════════════════════════════════════════════════════════
+let mediaRecorder; let audioChunks=[];
+async function startRecording() {
+    try {
+        state.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(state.audioStream);
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); }
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            document.getElementById('voice-playback').src = URL.createObjectURL(blob);
+            document.getElementById('voice-post-rec').classList.remove('hidden');
+            state.hasVoice = true;
+        }
+        mediaRecorder.start();
+        state.isRecording = true;
+        document.getElementById('voice-media-box').classList.add('is-recording');
+        
+        document.getElementById('btn-start-mic').classList.add('hidden');
+        document.getElementById('btn-stop-mic').classList.remove('hidden');
+        
+        document.getElementById('voice-status-dot').className = 'status-dot recording';
+        document.getElementById('voice-status-txt').innerText = 'Recording Live';
+        
+        initAudioViz();
+    } catch(e) { alert("Mic access denied."); }
+}
+
+function stopRecording() {
+    if(mediaRecorder && state.isRecording) {
+        mediaRecorder.stop();
+        state.isRecording = false;
+        state.audioStream.getTracks().forEach(t=>t.stop());
+        document.getElementById('voice-media-box').classList.remove('is-recording');
+        
+        document.getElementById('btn-stop-mic').classList.add('hidden');
+        document.getElementById('btn-retake-mic').classList.remove('hidden');
+        document.getElementById('voice-status-dot').className = 'status-dot active';
+        document.getElementById('voice-status-txt').innerText = 'Audio Processed';
+        
+        cancelAnimationFrame(state.vizReq);
+        if(state.audioCtx) state.audioCtx.close();
+        drawIdleViz();
+    }
+}
+
+function resetVoice() {
+    state.hasVoice = false;
+    document.getElementById('voice-post-rec').classList.add('hidden');
+    document.getElementById('btn-start-mic').classList.remove('hidden');
+    document.getElementById('btn-retake-mic').classList.add('hidden');
+    document.getElementById('voice-status-dot').className = 'status-dot';
+    document.getElementById('voice-status-txt').innerText = 'Mic Off';
+    drawIdleViz();
+}
+
+function handleVoiceUpload(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    document.getElementById('voice-up-name').innerText = file.name;
+    document.getElementById('voice-up-playback').src = URL.createObjectURL(file);
+    document.getElementById('voice-upload-view').firstElementChild.classList.add('hidden');
+    document.getElementById('voice-upload-result').classList.remove('hidden');
+    state.hasVoice = true;
+}
+function resetVoiceUpload() {
+    state.hasVoice = false;
+    document.getElementById('voice-upload').value = '';
+    document.getElementById('voice-upload-result').classList.add('hidden');
+    document.getElementById('voice-upload-view').firstElementChild.classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUDIO VISUALIZER
+// ══════════════════════════════════════════════════════════════
+const vizCanvas = document.getElementById('audio-viz');
+const vctx = vizCanvas.getContext('2d');
+
+function drawIdleViz() {
+    vizCanvas.width = vizCanvas.offsetWidth; vizCanvas.height = vizCanvas.offsetHeight;
+    vctx.clearRect(0,0, vizCanvas.width, vizCanvas.height);
+    vctx.beginPath(); vctx.moveTo(0, vizCanvas.height/2);
+    vctx.lineTo(vizCanvas.width, vizCanvas.height/2);
+    vctx.strokeStyle = 'rgba(98, 93, 245, 0.2)'; vctx.lineWidth = 2; vctx.stroke();
+}
+window.addEventListener('resize', drawIdleViz);
+setTimeout(drawIdleViz, 100);
+
+function initAudioViz() {
+    state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = state.audioCtx.createMediaStreamSource(state.audioStream);
+    state.analyser = state.audioCtx.createAnalyser();
+    state.analyser.fftSize = 64;
+    source.connect(state.analyser);
+    
+    const bufferLength = state.analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    function draw() {
+        if(!state.isRecording) return;
+        state.vizReq = requestAnimationFrame(draw);
+        state.analyser.getByteFrequencyData(dataArray);
+        
+        vizCanvas.width = vizCanvas.offsetWidth; vizCanvas.height = vizCanvas.offsetHeight;
+        const w = vizCanvas.width; const h = vizCanvas.height;
+        
+        vctx.clearRect(0,0,w,h);
+        const barW = w / bufferLength; let x = 0;
+        
+        for(let i=0; i<bufferLength; i++) {
+            const barH = (dataArray[i]/255) * h;
+            vctx.fillStyle = `rgba(98, 93, 245, ${Math.max(0.2, dataArray[i]/255)})`;
+            vctx.fillRect(x, h/2 - barH/2, barW - 2, barH);
+            x += barW;
+        }
+    }
+    draw();
+}
+
+// ══════════════════════════════════════════════════════════════
+// INFERENCE SIMULATION
+// ══════════════════════════════════════════════════════════════
+function createRandomDist() {
+    let arr = Object.keys(STRESS_W).map(()=>Math.random());
+    let sum = arr.reduce((a,b)=>a+b,0);
+    return arr.map(x=>x/sum);
+}
+
+function runInference() {
+    if(!state.hasFace && !state.hasVoice) {
+        alert("Please provide Face or Voice inputs to analyze."); return;
+    }
+    
+    const btn = document.getElementById('btn-analyze');
+    btn.classList.add('loading');
+    btn.scrollIntoView({behavior:'smooth', block:'center'});
+    
+    // Hide dashboard if it was open
+    const dash = document.getElementById('dashboard');
+    dash.classList.remove('visible');
+    
+    // Simulate API delay
+    setTimeout(() => {
+        btn.classList.remove('loading');
+        dash.classList.add('visible');
+        dash.scrollIntoView({behavior:'smooth', block:'start'});
+        
+        let fProbs = state.hasFace ? createRandomDist() : null;
+        let vProbs = state.hasVoice ? createRandomDist() : null;
+        
+        let fStress=0, vStress=0;
+        if(fProbs) fProbs.forEach((p,i)=> fStress += p * STRESS_W[EMOTIONS[i]]);
+        if(vProbs) vProbs.forEach((p,i)=> vStress += p * STRESS_W[EMOTIONS[i]]);
+        
+        let total = 0;
+        if(fProbs && vProbs) total = (fStress * 0.6) + (vStress * 0.4);
+        else if(fProbs) total = fStress;
+        else total = vStress;
+        
+        let pct = Math.round(total * 100);
+        animateGauge(pct);
+        renderBars('face-bars', fProbs);
+        renderBars('voice-bars', vProbs);
+        
+    }, 1500);
+}
+
+function animateGauge(targetPct) {
+    const circle = document.getElementById('gauge-circle');
+    const valEl = document.getElementById('res-score');
+    const statEl = document.getElementById('res-status');
+    const insEl = document.getElementById('res-insight');
+    
+    // offset = circ - (circ * pct/100) -> 628 is circ
+    let offset = 628 - (628 * targetPct / 100);
+    circle.style.strokeDashoffset = offset;
+    
+    circle.style.filter = `drop-shadow(0 0 12px ${targetPct<40?'#00ff87':targetPct<70?'#ffdf00':'#ff3b3b'})`;
+    
+    // number counter
+    let curr = 0;
+    let intv = setInterval(()=>{
+        if(curr >= targetPct) { clearInterval(intv); valEl.innerText=targetPct; return;}
+        curr += Math.max(1, Math.floor((targetPct-curr)/10));
+        valEl.innerText = curr;
+    }, 30);
+    
+    const reliefEl = document.getElementById('relief-suggestions');
+    let suggestionsHTML = "";
+
+    if(targetPct < 30) {
+        statEl.innerText = "Minimal Stress Detected"; statEl.style.color = 'var(--accent-green)';
+        insEl.innerText = "The fusion model indicates very low physiological arousal. You appear extremely calm.";
+        suggestionsHTML = `
+            <div class="sugg-item" style="border-left-color: var(--accent-green)"><strong>1. Keep the Momentum</strong><span>Maintain your current routine, as it's clearly working well for your nervous system.</span></div>
+            <div class="sugg-item" style="border-left-color: var(--accent-green)"><strong>2. Proactive Rest</strong><span>Remember that rest is productive. Take 5 minutes to just do nothing or meditate.</span></div>
+            <div class="sugg-item" style="border-left-color: var(--accent-green)"><strong>3. Light Stretching</strong><span>Do some gentle neck or shoulder rolls to maintain physical relaxation and prevent tension.</span></div>
+        `;
+    } else if (targetPct < 60) {
+        statEl.innerText = "Mild Cognitive Load"; statEl.style.color = 'var(--accent-yellow)';
+        insEl.innerText = "Model detects baseline activity shifts pointing to moderate environmental engagement or mild stress.";
+        suggestionsHTML = `
+            <div class="sugg-item" style="border-left-color: var(--accent-yellow)"><strong>1. 4-7-8 Breathing</strong><span>Inhale for 4s, hold for 7s, exhale for 8s. Repeat 4 times to reset your autonomic nervous system.</span></div>
+            <div class="sugg-item" style="border-left-color: var(--accent-yellow)"><strong>2. Visual Reset</strong><span>Look at something 20 feet away for 20 seconds to relieve cognitive and ocular strain.</span></div>
+            <div class="sugg-item" style="border-left-color: var(--accent-yellow)"><strong>3. Posture Check</strong><span>Drop your shoulders, unclench your jaw, and sit back. Physical tension directly feeds into mental stress.</span></div>
+        `;
+    } else if (targetPct < 80) {
+        statEl.innerText = "Moderate Stress State"; statEl.style.color = '#ff8800';
+        insEl.innerText = "Neural feature extraction confirms moderately elevated stress markers across modalities.";
+        suggestionsHTML = `
+            <div class="sugg-item" style="border-left-color: #ff8800"><strong>1. Box Breathing</strong><span>Inhale for 4s, hold 4s, exhale 4s, hold 4s. Repeat for 2 minutes to stabilize your nervous system.</span></div>
+            <div class="sugg-item" style="border-left-color: #ff8800"><strong>2. Rapid Muscle Relaxation</strong><span>Tense every muscle in your body as hard as you can for 5 seconds, then completely let go. Feel the tension physically leave.</span></div>
+            <div class="sugg-item" style="border-left-color: #ff8800"><strong>3. Brisk Movement</strong><span>Do 20 jumping jacks or walk rapidly for 5 minutes. Physical movement helps process built-up adrenaline.</span></div>
+        `;
+    } else {
+        statEl.innerText = "High Stress State"; statEl.style.color = 'var(--accent-red)';
+        insEl.innerText = "Severe physiological arousal detected. Immediate intervention recommended.";
+        suggestionsHTML = `
+            <div class="sugg-item" style="border-left-color: var(--accent-red)"><strong>1. Physiological Sigh</strong><span>Take two quick inhales through the nose, followed by one long exhale through the mouth. Repeat 3 times to rapidly lower your heart rate.</span></div>
+            <div class="sugg-item" style="border-left-color: var(--accent-red)"><strong>2. Cold Exposure</strong><span>Splash cold water on your face or hold an ice cube. This triggers the mammalian dive reflex, instantly forcing your autonomic nervous system to calm down.</span></div>
+            <div class="sugg-item" style="border-left-color: var(--accent-red)"><strong>3. Grounding (5-4-3-2-1)</strong><span>Find 5 things you see, 4 you touch, 3 you hear, 2 you smell, and 1 you taste to bring your brain immediately out of the fight-or-flight state.</span></div>
+        `;
+    }
+    reliefEl.innerHTML = suggestionsHTML;
+}
+
+function renderBars(containerId, probs) {
+    const cont = document.getElementById(containerId);
+    if(!probs) {
+        cont.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem; padding-top:20px;">Stream not utilized in this run.</div>`;
+        return;
+    }
+    
+    let html = '';
+    let arr = EMOTIONS.map((e, i) => ({name: e, val: probs[i]})).sort((a,b)=>b.val-a.val);
+    
+    arr.forEach(item => {
+        let pct = (item.val*100).toFixed(1);
+        let niceName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
+        html += `
+            <div class="emotion-row">
+                <div class="e-label">${niceName}</div>
+                <div class="e-track">
+                    <div class="e-fill em-${item.name}" style="width:0%"></div>
+                </div>
+                <div class="e-pct">${pct}%</div>
+            </div>
+        `;
+    });
+    cont.innerHTML = Object.keys(STRESS_W).length ? html : '';
+    
+    // trigger animation
+    setTimeout(() => {
+        let fills = cont.querySelectorAll('.e-fill');
+        fills.forEach((f, i) => { f.style.width = `${(arr[i].val)*100}%`; });
+    }, 100);
+}
+
+</script>
+</body>
+</html>

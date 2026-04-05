@@ -1,0 +1,10 @@
+torch
+torchvision
+torchaudio
+transformers
+librosa
+gradio
+scikit-learn
+numpy
+Pillow
+huggingface_hub

@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Virtual Environments
+venv/
+env/
+
+# Large Model Checkpoints
+*.pth
+*.pt
+dataset_face/
+dataset_voice/
